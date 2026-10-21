@@ -79,10 +79,22 @@ Call it once, before worker threads start. The containing shared object must rem
 ```powershell
 $env:ANDROID_NDK_HOME = "C:\Android\ndk\27.0.12077973"
 cmake --preset android-arm64-release
-cmake --build --preset android-arm64-release
+cmake --build --preset android-arm64-release -j 1
 ```
 
 The archive is written to `build/android-arm64-release/hideso.a`.
+
+## OLLVM build
+
+Use a compatible custom Clang toolchain and enable the guarded pass set:
+
+```powershell
+$env:ANDROID_NDK_HOME = "C:\Android\ndk\27.0.12077973"
+cmake --preset android-arm64-release -DOG_ENABLE_OLLVM=ON
+cmake --build --preset android-arm64-release
+```
+
+The exact configured pass block is applied directly to the target. Ninja compilation is serialized to keep the requested BCF function creation and 100-instruction junk-assembly settings within host memory. The function-filter switches act on OLLVM annotations. Sensitive linker and process-map literals also use the pinned `xorstr` header recorded in `THIRD_PARTY_NOTICES.txt`.
 
 ## Compatibility
 

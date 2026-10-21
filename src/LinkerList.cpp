@@ -1,4 +1,5 @@
 #include "LinkerList.hpp"
+#include "HideSo/xorstr.hpp"
 
 #include <elf.h>
 #include <link.h>
@@ -42,7 +43,7 @@ namespace HideSoPrivate {
 
         const char* FileName = strrchr(ImagePath, '/');
         FileName = FileName == nullptr ? ImagePath : FileName + 1;
-        if (strcmp(FileName, "linker64") != 0)
+        if (strcmp(FileName, xorstr_("linker64")) != 0)
         {
             return 0;
         }

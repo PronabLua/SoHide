@@ -1,4 +1,5 @@
 #include "ElfFile.hpp"
+#include "HideSo/xorstr.hpp"
 
 #include <elf.h>
 #include <fcntl.h>
@@ -11,12 +12,12 @@
 namespace HideSoPrivate {
     static bool MatchesHeadSymbol(const char* SymbolName)
     {
-        return strncmp(SymbolName, "__dl__ZL6solist", strlen("__dl__ZL6solist")) == 0 || strncmp(SymbolName, "__dl__ZL11solist_head", strlen("__dl__ZL11solist_head")) == 0;
+        return strncmp(SymbolName, xorstr_("__dl__ZL6solist"), sizeof("__dl__ZL6solist") - 1) == 0 || strncmp(SymbolName, xorstr_("__dl__ZL11solist_head"), sizeof("__dl__ZL11solist_head") - 1) == 0;
     }
 
     static bool MatchesTailSymbol(const char* SymbolName)
     {
-        return strncmp(SymbolName, "__dl__ZL6sonext", strlen("__dl__ZL6sonext")) == 0 || strncmp(SymbolName, "__dl__ZL11solist_tail", strlen("__dl__ZL11solist_tail")) == 0;
+        return strncmp(SymbolName, xorstr_("__dl__ZL6sonext"), sizeof("__dl__ZL6sonext") - 1) == 0 || strncmp(SymbolName, xorstr_("__dl__ZL11solist_tail"), sizeof("__dl__ZL11solist_tail") - 1) == 0;
     }
 
     static bool IsRangeValid(size_t FileSize, uint64_t Offset, uint64_t Length)

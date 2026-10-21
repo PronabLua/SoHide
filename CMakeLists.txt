@@ -7,6 +7,28 @@ if(NOT ANDROID OR NOT ANDROID_ABI STREQUAL "arm64-v8a")
 endif()
 
 option(HideSoBuildCompileTest "Compile the public API integration test" ON)
+option(OG_ENABLE_OLLVM "Enable custom LLVM obfuscation passes" OFF)
+
+if(OG_ENABLE_OLLVM)
+    set_property(GLOBAL PROPERTY JOB_POOLS og_compile_pool=1)
+    set(CMAKE_JOB_POOL_COMPILE og_compile_pool)
+    add_compile_definitions(OG_OLLVM_ENABLED=1)
+    add_compile_options(
+        "-mllvm=-passes=indbr,fla,bcf,idc"
+        "-mllvm=-fla-func"
+        "-mllvm=-indbr-func"
+        "-mllvm=-bcf-func"
+        "-mllvm=-mba-func"
+        "-mllvm=-sub-func"
+        "-mllvm=-idc-func"
+        "-mllvm=-fw_times=6"
+        "-mllvm=-bcf_junkasm"
+        "-mllvm=-bcf_createfunc"
+        "-mllvm=-bcf_cond_compl=5"
+        "-mllvm=-bcf_junkasm_minnum=100"
+        "-mllvm=-bcf_junkasm_maxnum=100"
+    )
+endif()
 
 add_library(HideSo STATIC
     src/ElfFile.cpp

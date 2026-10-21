@@ -1,4 +1,5 @@
 #include "MemoryMaps.hpp"
+#include "HideSo/xorstr.hpp"
 
 #include <elf.h>
 #include <link.h>
@@ -73,7 +74,7 @@ namespace HideSoPrivate {
     template<typename Visitor>
     static HideSo::Status VisitMemoryMaps(Visitor&& Visit)
     {
-        FILE* MapsFile = fopen("/proc/self/maps", "re");
+        FILE* MapsFile = fopen(xorstr_("/proc/self/maps"), xorstr_("re"));
         if (MapsFile == nullptr)
         {
             return HideSo::MapsUnavailable;
