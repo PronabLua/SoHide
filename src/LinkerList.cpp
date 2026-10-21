@@ -7,13 +7,9 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#if defined(SoHideDiagnostics)
-#include <android/log.h>
-#endif
-
 #include "ElfFile.hpp"
 
-namespace SoHideInternal {
+namespace HideSoPrivate {
     static constexpr size_t MaximumObjectBytes = 1024;
     static constexpr size_t MaximumListEntries = 512;
 
@@ -165,75 +161,59 @@ namespace SoHideInternal {
         return Restored;
     }
 
-    static SoHideStatus ResolveLinkerList(LinkerSymbols* Symbols, uintptr_t* ListHead, uintptr_t* ListTail, size_t* NextOffset)
+    static HideSo::Status ResolveLinkerList(LinkerSymbols* Symbols, uintptr_t* ListHead, uintptr_t* ListTail, size_t* NextOffset)
     {
         LinkerIdentity Linker = {};
         dl_iterate_phdr(FindLinkerCallback, &Linker);
         if (!Linker.Found)
         {
-            return SoHideStatusLinkerNotFound;
+            return HideSo::LinkerNotFound;
         }
 
-        SoHideStatus Status = FindLinkerSymbols(Linker.Base, Linker.Path, Symbols);
-        if (Status != SoHideStatusSuccess)
+        HideSo::Status Status = FindLinkerSymbols(Linker.Base, Linker.Path, Symbols);
+        if (Status != HideSo::Success)
         {
             return Status;
         }
         if (!ReadPointer(Symbols->ListHeadStorage, ListHead) || !ReadPointer(Symbols->ListTailStorage, ListTail) || *ListHead == 0 || *ListTail == 0)
         {
-            return SoHideStatusLinkerLayoutUnavailable;
+            return HideSo::LinkerLayoutUnavailable;
         }
         if (!FindNextOffset(*ListHead, *ListTail, NextOffset))
         {
-            return SoHideStatusLinkerLayoutUnavailable;
+            return HideSo::LinkerLayoutUnavailable;
         }
-        return SoHideStatusSuccess;
+        return HideSo::Success;
     }
 
-    SoHideStatus UnlinkImageFromLinker(const ImageIdentity& Identity)
+    HideSo::Status UnlinkImageFromLinker(const ImageIdentity& Identity)
     {
         LinkerSymbols Symbols = {};
         uintptr_t ListHead = 0;
         uintptr_t ListTail = 0;
         size_t NextOffset = 0;
-        SoHideStatus Status = ResolveLinkerList(&Symbols, &ListHead, &ListTail, &NextOffset);
-        if (Status != SoHideStatusSuccess)
+        HideSo::Status Status = ResolveLinkerList(&Symbols, &ListHead, &ListTail, &NextOffset);
+        if (Status != HideSo::Success)
         {
             return Status;
         }
-
-#if defined(SoHideDiagnostics)
-        __android_log_print(ANDROID_LOG_INFO, "SoHide", "head-storage=%p tail-storage=%p head=%p tail=%p next-offset=0x%zx", (void*)Symbols.ListHeadStorage, (void*)Symbols.ListTailStorage, (void*)ListHead, (void*)ListTail, NextOffset);
-#endif
 
         uintptr_t PreviousEntry = 0;
         uintptr_t TargetEntry = 0;
         uintptr_t NextEntry = 0;
         if (!FindTargetEntry(ListHead, NextOffset, Identity, &PreviousEntry, &TargetEntry, &NextEntry) || PreviousEntry == 0)
         {
-            return SoHideStatusLinkerEntryUnavailable;
+            return HideSo::LinkerEntryUnavailable;
         }
-#if defined(SoHideDiagnostics)
-        __android_log_print(ANDROID_LOG_INFO, "SoHide", "previous=%p target=%p next=%p base=%p phdr=%p", (void*)PreviousEntry, (void*)TargetEntry, (void*)NextEntry, (void*)Identity.Base, Identity.ProgramHeaders);
-#endif
         if (!WritePointer(PreviousEntry + NextOffset, NextEntry))
         {
-            return SoHideStatusLinkerPatchFailed;
+            return HideSo::LinkerPatchFailed;
         }
-#if defined(SoHideDiagnostics)
-        uintptr_t PatchedEntry = 0;
-        ReadPointer(PreviousEntry + NextOffset, &PatchedEntry);
-        uintptr_t RemainingPrevious = 0;
-        uintptr_t RemainingTarget = 0;
-        uintptr_t RemainingNext = 0;
-        bool StillReachable = FindTargetEntry(ListHead, NextOffset, Identity, &RemainingPrevious, &RemainingTarget, &RemainingNext);
-        __android_log_print(ANDROID_LOG_INFO, "SoHide", "patched-next=%p reachable=%d remaining-previous=%p remaining-target=%p remaining-next=%p", (void*)PatchedEntry, StillReachable ? 1 : 0, (void*)RemainingPrevious, (void*)RemainingTarget, (void*)RemainingNext);
-#endif
         if (TargetEntry == ListTail && !WritePointer(Symbols.ListTailStorage, PreviousEntry))
         {
-            return SoHideStatusLinkerPatchFailed;
+            return HideSo::LinkerPatchFailed;
         }
-        return SoHideStatusSuccess;
+        return HideSo::Success;
     }
 
     struct EntrySearch
@@ -248,9 +228,6 @@ namespace SoHideInternal {
         EntrySearch* Search = (EntrySearch*)SearchContext;
         if ((uintptr_t)ProgramHeaderInformation->dlpi_addr == Search->Identity->Base)
         {
-#if defined(SoHideDiagnostics)
-            __android_log_print(ANDROID_LOG_INFO, "SoHide", "verification-entry=%p phdr=%p path=%s", (void*)ProgramHeaderInformation->dlpi_addr, ProgramHeaderInformation->dlpi_phdr, ProgramHeaderInformation->dlpi_name == nullptr ? "" : ProgramHeaderInformation->dlpi_name);
-#endif
             Search->Found = true;
             return 1;
         }

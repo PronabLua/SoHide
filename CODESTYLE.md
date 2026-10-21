@@ -1,4 +1,4 @@
-# SoHide coding style
+# HideSo coding style
 
 Applies to every C and C++ source file. No exceptions.
 

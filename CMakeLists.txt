@@ -1,54 +1,43 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22.1)
 
-project(SoHide VERSION 1.0.0 LANGUAGES C CXX)
+project(HideSo VERSION 1.1.0 LANGUAGES CXX)
 
-if(NOT ANDROID)
-    message(FATAL_ERROR "SoHide supports Android only")
+if(NOT ANDROID OR NOT ANDROID_ABI STREQUAL "arm64-v8a")
+    message(FATAL_ERROR "HideSo requires Android ARM64")
 endif()
 
-if(NOT CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
-    message(FATAL_ERROR "SoHide supports arm64-v8a only")
-endif()
+option(HideSoBuildCompileTest "Compile the public API integration test" ON)
 
-option(SoHideBuildProof "Build the native CTF proof runner and payload" ON)
-
-add_library(SoHide STATIC
+add_library(HideSo STATIC
     src/ElfFile.cpp
+    src/HideSo.cpp
     src/LinkerList.cpp
     src/MemoryMaps.cpp
-    src/SoHide.cpp
 )
-add_library(SoHide::SoHide ALIAS SoHide)
-set_target_properties(SoHide PROPERTIES POSITION_INDEPENDENT_CODE ON)
+add_library(HideSo::HideSo ALIAS HideSo)
 
-target_include_directories(SoHide
+set_target_properties(HideSo PROPERTIES ARCHIVE_OUTPUT_NAME hideso PREFIX "" POSITION_INDEPENDENT_CODE ON CXX_EXTENSIONS OFF)
+
+target_include_directories(HideSo
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_compile_features(SoHide PUBLIC cxx_std_20)
-target_compile_definitions(SoHide PRIVATE _GNU_SOURCE $<$<CONFIG:Debug>:SoHideDiagnostics>)
-target_compile_options(SoHide PRIVATE -Wall -Wextra -Werror -fvisibility=hidden -fno-exceptions -fno-rtti -ffunction-sections -fdata-sections)
-target_link_libraries(SoHide PUBLIC dl log)
+target_compile_features(HideSo PUBLIC cxx_std_20)
+target_compile_definitions(HideSo PRIVATE _GNU_SOURCE)
+target_compile_options(HideSo PRIVATE -Wall -Wextra -Werror -fvisibility=hidden -fno-exceptions -fno-rtti -ffunction-sections -fdata-sections)
+target_link_options(HideSo INTERFACE "-Wl,-z,max-page-size=16384" "-Wl,-z,common-page-size=16384")
 
-install(TARGETS SoHide ARCHIVE DESTINATION lib)
-install(DIRECTORY include/ DESTINATION include)
+find_library(DynamicLinkerLibrary dl REQUIRED)
+target_link_libraries(HideSo INTERFACE ${DynamicLinkerLibrary})
 
-if(SoHideBuildProof)
-    add_library(SoHidePublicApiSmoke OBJECT proof/PublicApiSmoke.c)
-    target_include_directories(SoHidePublicApiSmoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    target_compile_options(SoHidePublicApiSmoke PRIVATE -Wall -Wextra -Werror -fvisibility=hidden)
-
-    add_library(SoHideProofPayload SHARED proof/Payload.cpp)
-    target_link_libraries(SoHideProofPayload PRIVATE SoHide log dl)
-    target_compile_options(SoHideProofPayload PRIVATE -Wall -Wextra -Werror -fvisibility=hidden -fno-exceptions -fno-rtti)
-    target_link_options(SoHideProofPayload PRIVATE -Wl,-z,now -Wl,--gc-sections)
-
-    add_executable(SoHideProofRunner proof/Runner.cpp)
-    target_include_directories(SoHideProofRunner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-    target_link_libraries(SoHideProofRunner PRIVATE dl)
-    target_compile_options(SoHideProofRunner PRIVATE -Wall -Wextra -Werror -fvisibility=hidden -fno-exceptions -fno-rtti)
-    target_link_options(SoHideProofRunner PRIVATE -Wl,-z,now -Wl,--gc-sections)
+if(HideSoBuildCompileTest)
+    add_library(HideSoPublicApiCompileTest OBJECT tests/PublicApiSmoke.cpp)
+    target_link_libraries(HideSoPublicApiCompileTest PRIVATE HideSo::HideSo)
+    target_compile_options(HideSoPublicApiCompileTest PRIVATE -Wall -Wextra -Werror -fvisibility=hidden -fno-exceptions -fno-rtti)
 endif()
+
+install(TARGETS HideSo ARCHIVE DESTINATION lib)
+install(DIRECTORY include/ DESTINATION include)

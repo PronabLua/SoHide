@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-namespace SoHideInternal {
+namespace HideSoPrivate {
     static bool MatchesHeadSymbol(const char* SymbolName)
     {
         return strncmp(SymbolName, "__dl__ZL6solist", strlen("__dl__ZL6solist")) == 0 || strncmp(SymbolName, "__dl__ZL11solist_head", strlen("__dl__ZL11solist_head")) == 0;
@@ -24,11 +24,11 @@ namespace SoHideInternal {
         return Offset <= FileSize && Length <= FileSize - Offset;
     }
 
-    SoHideStatus FindLinkerSymbols(uintptr_t LinkerBase, const char* LinkerPath, LinkerSymbols* Symbols)
+    HideSo::Status FindLinkerSymbols(uintptr_t LinkerBase, const char* LinkerPath, LinkerSymbols* Symbols)
     {
         if (LinkerBase == 0 || LinkerPath == nullptr || LinkerPath[0] == '\0' || Symbols == nullptr)
         {
-            return SoHideStatusInvalidArgument;
+            return HideSo::InvalidArgument;
         }
 
         Symbols->ListHeadStorage = 0;
@@ -37,14 +37,14 @@ namespace SoHideInternal {
         int LinkerFile = open(LinkerPath, O_RDONLY | O_CLOEXEC);
         if (LinkerFile < 0)
         {
-            return SoHideStatusLinkerSymbolsUnavailable;
+            return HideSo::LinkerSymbolsUnavailable;
         }
 
         struct stat LinkerFileStatus = {};
         if (fstat(LinkerFile, &LinkerFileStatus) != 0 || LinkerFileStatus.st_size <= 0)
         {
             close(LinkerFile);
-            return SoHideStatusLinkerSymbolsUnavailable;
+            return HideSo::LinkerSymbolsUnavailable;
         }
 
         size_t LinkerFileSize = (size_t)LinkerFileStatus.st_size;
@@ -52,20 +52,20 @@ namespace SoHideInternal {
         close(LinkerFile);
         if (LinkerFileMapping == MAP_FAILED)
         {
-            return SoHideStatusLinkerSymbolsUnavailable;
+            return HideSo::LinkerSymbolsUnavailable;
         }
 
         const Elf64_Ehdr* Header = (const Elf64_Ehdr*)LinkerFileMapping;
         if (LinkerFileSize < sizeof(Elf64_Ehdr) || memcmp(Header->e_ident, ELFMAG, SELFMAG) != 0 || Header->e_ident[EI_CLASS] != ELFCLASS64 || Header->e_machine != EM_AARCH64)
         {
             munmap(LinkerFileMapping, LinkerFileSize);
-            return SoHideStatusLinkerSymbolsUnavailable;
+            return HideSo::LinkerSymbolsUnavailable;
         }
 
         if (Header->e_shentsize != sizeof(Elf64_Shdr) || Header->e_shnum == 0 || !IsRangeValid(LinkerFileSize, Header->e_shoff, (uint64_t)Header->e_shnum * sizeof(Elf64_Shdr)))
         {
             munmap(LinkerFileMapping, LinkerFileSize);
-            return SoHideStatusLinkerSymbolsUnavailable;
+            return HideSo::LinkerSymbolsUnavailable;
         }
 
         const Elf64_Shdr* Sections = (const Elf64_Shdr*)((const uint8_t*)LinkerFileMapping + Header->e_shoff);
@@ -107,6 +107,6 @@ namespace SoHideInternal {
         }
 
         munmap(LinkerFileMapping, LinkerFileSize);
-        return Symbols->ListHeadStorage != 0 && Symbols->ListTailStorage != 0 ? SoHideStatusSuccess : SoHideStatusLinkerSymbolsUnavailable;
+        return Symbols->ListHeadStorage != 0 && Symbols->ListTailStorage != 0 ? HideSo::Success : HideSo::LinkerSymbolsUnavailable;
     }
 }

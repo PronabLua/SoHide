@@ -2,14 +2,14 @@
 
 #include <stdint.h>
 
-#include "SoHide/SoHide.h"
+#include "HideSo/HideSo.h"
 
-namespace SoHideInternal {
+namespace HideSoPrivate {
     struct LinkerSymbols
     {
         uintptr_t ListHeadStorage;
         uintptr_t ListTailStorage;
     };
 
-    SoHideStatus FindLinkerSymbols(uintptr_t LinkerBase, const char* LinkerPath, LinkerSymbols* Symbols);
+    HideSo::Status FindLinkerSymbols(uintptr_t LinkerBase, const char* LinkerPath, LinkerSymbols* Symbols);
 }

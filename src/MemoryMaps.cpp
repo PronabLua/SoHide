@@ -9,7 +9,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
-namespace SoHideInternal {
+namespace HideSoPrivate {
     static constexpr size_t MaximumMapCount = 2048;
     static constexpr size_t MaximumImageMapCount = 32;
 
@@ -47,18 +47,18 @@ namespace SoHideInternal {
         }
     }
 
-    SoHideStatus ReadMemoryMaps(MemoryMap* Mappings, size_t Capacity, size_t* Count)
+    HideSo::Status ReadMemoryMaps(MemoryMap* Mappings, size_t Capacity, size_t* Count)
     {
         if (Mappings == nullptr || Capacity == 0 || Count == nullptr)
         {
-            return SoHideStatusInvalidArgument;
+            return HideSo::InvalidArgument;
         }
 
         *Count = 0;
         FILE* MapsFile = fopen("/proc/self/maps", "re");
         if (MapsFile == nullptr)
         {
-            return SoHideStatusMapsUnavailable;
+            return HideSo::MapsUnavailable;
         }
 
         char* MapLine = nullptr;
@@ -69,7 +69,7 @@ namespace SoHideInternal {
             {
                 free(MapLine);
                 fclose(MapsFile);
-                return SoHideStatusMapLimitExceeded;
+                return HideSo::MapLimitExceeded;
             }
 
             unsigned long long Start = 0;
@@ -102,7 +102,7 @@ namespace SoHideInternal {
 
         free(MapLine);
         fclose(MapsFile);
-        return SoHideStatusSuccess;
+        return HideSo::Success;
     }
 
     struct ImageSearch
@@ -141,11 +141,11 @@ namespace SoHideInternal {
         return 0;
     }
 
-    SoHideStatus FindImageIdentity(const void* ModuleAddress, ImageIdentity* Identity)
+    HideSo::Status FindImageIdentity(const void* ModuleAddress, ImageIdentity* Identity)
     {
         if (ModuleAddress == nullptr || Identity == nullptr)
         {
-            return SoHideStatusInvalidArgument;
+            return HideSo::InvalidArgument;
         }
 
         memset(Identity, 0, sizeof(*Identity));
@@ -153,13 +153,13 @@ namespace SoHideInternal {
         dl_iterate_phdr(FindImageCallback, &Search);
         if (!Search.Found || Identity->Path[0] == '\0')
         {
-            return SoHideStatusImageNotFound;
+            return HideSo::ImageNotFound;
         }
 
         MemoryMap Mappings[MaximumMapCount] = {};
         size_t MappingCount = 0;
-        SoHideStatus Status = ReadMemoryMaps(Mappings, MaximumMapCount, &MappingCount);
-        if (Status != SoHideStatusSuccess)
+        HideSo::Status Status = ReadMemoryMaps(Mappings, MaximumMapCount, &MappingCount);
+        if (Status != HideSo::Success)
         {
             return Status;
         }
@@ -177,11 +177,11 @@ namespace SoHideInternal {
                 {
                     CopyText(Identity->Path, sizeof(Identity->Path), Mapping.Path);
                 }
-                return SoHideStatusSuccess;
+                return HideSo::Success;
             }
         }
 
-        return SoHideStatusImageNotFound;
+        return HideSo::ImageNotFound;
     }
 
     static bool IsSameImage(const ImageIdentity& Identity, const MemoryMap& Mapping)
@@ -214,17 +214,17 @@ namespace SoHideInternal {
         return false;
     }
 
-    SoHideStatus CollectImageMappings(const ImageIdentity& Identity, MemoryMap* Mappings, size_t Capacity, size_t* Count)
+    HideSo::Status CollectImageMappings(const ImageIdentity& Identity, MemoryMap* Mappings, size_t Capacity, size_t* Count)
     {
         if (Mappings == nullptr || Capacity == 0 || Count == nullptr)
         {
-            return SoHideStatusInvalidArgument;
+            return HideSo::InvalidArgument;
         }
 
         MemoryMap ProcessMappings[MaximumMapCount] = {};
         size_t ProcessMappingCount = 0;
-        SoHideStatus Status = ReadMemoryMaps(ProcessMappings, MaximumMapCount, &ProcessMappingCount);
-        if (Status != SoHideStatusSuccess)
+        HideSo::Status Status = ReadMemoryMaps(ProcessMappings, MaximumMapCount, &ProcessMappingCount);
+        if (Status != HideSo::Success)
         {
             return Status;
         }
@@ -238,12 +238,12 @@ namespace SoHideInternal {
             }
             if (*Count == Capacity)
             {
-                return SoHideStatusMapLimitExceeded;
+                return HideSo::MapLimitExceeded;
             }
             Mappings[(*Count)++] = ProcessMappings[MappingIndex];
         }
 
-        return *Count == 0 ? SoHideStatusImageNotFound : SoHideStatusSuccess;
+        return *Count == 0 ? HideSo::ImageNotFound : HideSo::Success;
     }
 
     bool IsReadableAddress(uintptr_t Address, size_t Length)
@@ -255,7 +255,7 @@ namespace SoHideInternal {
 
         MemoryMap Mappings[MaximumMapCount] = {};
         size_t MappingCount = 0;
-        if (ReadMemoryMaps(Mappings, MaximumMapCount, &MappingCount) != SoHideStatusSuccess)
+        if (ReadMemoryMaps(Mappings, MaximumMapCount, &MappingCount) != HideSo::Success)
         {
             return false;
         }
@@ -280,7 +280,7 @@ namespace SoHideInternal {
 
         MemoryMap Mappings[MaximumMapCount] = {};
         size_t MappingCount = 0;
-        if (ReadMemoryMaps(Mappings, MaximumMapCount, &MappingCount) != SoHideStatusSuccess)
+        if (ReadMemoryMaps(Mappings, MaximumMapCount, &MappingCount) != HideSo::Success)
         {
             return false;
         }
@@ -300,7 +300,7 @@ namespace SoHideInternal {
     {
         MemoryMap Mappings[MaximumMapCount] = {};
         size_t MappingCount = 0;
-        if (ReadMemoryMaps(Mappings, MaximumMapCount, &MappingCount) != SoHideStatusSuccess)
+        if (ReadMemoryMaps(Mappings, MaximumMapCount, &MappingCount) != HideSo::Success)
         {
             return true;
         }
@@ -315,25 +315,25 @@ namespace SoHideInternal {
         return false;
     }
 
-    static SoHideStatus RemapMapping(const MemoryMap& Mapping)
+    static HideSo::Status RemapMapping(const MemoryMap& Mapping)
     {
         if (!Mapping.PrivateMapping || (Mapping.Protection & PROT_READ) == 0)
         {
-            return SoHideStatusUnsupportedMapping;
+            return HideSo::UnsupportedMapping;
         }
 
         size_t MappingLength = Mapping.End - Mapping.Start;
         void* ShadowMapping = mmap(nullptr, MappingLength, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (ShadowMapping == MAP_FAILED)
         {
-            return SoHideStatusAllocationFailed;
+            return HideSo::AllocationFailed;
         }
 
         memcpy(ShadowMapping, (const void*)Mapping.Start, MappingLength);
         if (mprotect(ShadowMapping, MappingLength, Mapping.Protection) != 0)
         {
             munmap(ShadowMapping, MappingLength);
-            return SoHideStatusProtectionFailed;
+            return HideSo::ProtectionFailed;
         }
 
         void* RemappedAddress = (void*)syscall(__NR_mremap, ShadowMapping, MappingLength, MappingLength, MREMAP_MAYMOVE | MREMAP_FIXED, (void*)Mapping.Start);
@@ -347,27 +347,27 @@ namespace SoHideInternal {
             {
                 munmap(ShadowMapping, MappingLength);
             }
-            return SoHideStatusRemapFailed;
+            return HideSo::RemapFailed;
         }
 
         if ((Mapping.Protection & PROT_EXEC) != 0)
         {
             __builtin___clear_cache((char*)Mapping.Start, (char*)Mapping.End);
         }
-        return SoHideStatusSuccess;
+        return HideSo::Success;
     }
 
-    SoHideStatus RemapImageMappings(const ImageIdentity& Identity, size_t* MappingCount, size_t* RemappedBytes)
+    HideSo::Status RemapImageMappings(const ImageIdentity& Identity, size_t* MappingCount, size_t* RemappedBytes)
     {
         if (MappingCount == nullptr || RemappedBytes == nullptr)
         {
-            return SoHideStatusInvalidArgument;
+            return HideSo::InvalidArgument;
         }
 
         MemoryMap ImageMappings[MaximumImageMapCount] = {};
         size_t ImageMappingCount = 0;
-        SoHideStatus Status = CollectImageMappings(Identity, ImageMappings, MaximumImageMapCount, &ImageMappingCount);
-        if (Status != SoHideStatusSuccess)
+        HideSo::Status Status = CollectImageMappings(Identity, ImageMappings, MaximumImageMapCount, &ImageMappingCount);
+        if (Status != HideSo::Success)
         {
             return Status;
         }
@@ -377,22 +377,22 @@ namespace SoHideInternal {
         for (size_t MappingIndex = 0; MappingIndex < ImageMappingCount; ++MappingIndex)
         {
             Status = RemapMapping(ImageMappings[MappingIndex]);
-            if (Status != SoHideStatusSuccess)
+            if (Status != HideSo::Success)
             {
                 return Status;
             }
             ++*MappingCount;
             *RemappedBytes += ImageMappings[MappingIndex].End - ImageMappings[MappingIndex].Start;
         }
-        return SoHideStatusSuccess;
+        return HideSo::Success;
     }
 
-    SoHideStatus ClearImageHeader(const ImageIdentity& Identity)
+    HideSo::Status ClearImageHeader(const ImageIdentity& Identity)
     {
         long PageSizeResult = sysconf(_SC_PAGESIZE);
         if (PageSizeResult <= 0 || Identity.Base == 0 || !IsReadableAddress(Identity.Base, sizeof(Elf64_Ehdr)))
         {
-            return SoHideStatusHeaderUnavailable;
+            return HideSo::HeaderUnavailable;
         }
 
         size_t PageSize = (size_t)PageSizeResult;
@@ -400,11 +400,11 @@ namespace SoHideInternal {
         int OriginalProtection = 0;
         if (!GetAddressProtection(Identity.Base, &OriginalProtection))
         {
-            return SoHideStatusHeaderUnavailable;
+            return HideSo::HeaderUnavailable;
         }
         if (mprotect((void*)HeaderPage, PageSize, PROT_READ | PROT_WRITE) != 0)
         {
-            return SoHideStatusProtectionFailed;
+            return HideSo::ProtectionFailed;
         }
 
         volatile uint8_t* HeaderBytes = (volatile uint8_t*)Identity.Base;
@@ -415,8 +415,8 @@ namespace SoHideInternal {
 
         if (mprotect((void*)HeaderPage, PageSize, OriginalProtection) != 0)
         {
-            return SoHideStatusProtectionFailed;
+            return HideSo::ProtectionFailed;
         }
-        return SoHideStatusSuccess;
+        return HideSo::Success;
     }
 }

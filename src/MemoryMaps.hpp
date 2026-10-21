@@ -3,9 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "SoHide/SoHide.h"
+#include "HideSo/HideSo.h"
 
-namespace SoHideInternal {
+namespace HideSoPrivate {
     struct MemoryMap
     {
         uintptr_t Start;
@@ -30,12 +30,12 @@ namespace SoHideInternal {
         char Path[768];
     };
 
-    SoHideStatus ReadMemoryMaps(MemoryMap* Mappings, size_t Capacity, size_t* Count);
-    SoHideStatus FindImageIdentity(const void* ModuleAddress, ImageIdentity* Identity);
-    SoHideStatus CollectImageMappings(const ImageIdentity& Identity, MemoryMap* Mappings, size_t Capacity, size_t* Count);
+    HideSo::Status ReadMemoryMaps(MemoryMap* Mappings, size_t Capacity, size_t* Count);
+    HideSo::Status FindImageIdentity(const void* ModuleAddress, ImageIdentity* Identity);
+    HideSo::Status CollectImageMappings(const ImageIdentity& Identity, MemoryMap* Mappings, size_t Capacity, size_t* Count);
     bool IsReadableAddress(uintptr_t Address, size_t Length);
     bool GetAddressProtection(uintptr_t Address, int* Protection);
     bool HasImagePath(const ImageIdentity& Identity);
-    SoHideStatus RemapImageMappings(const ImageIdentity& Identity, size_t* MappingCount, size_t* RemappedBytes);
-    SoHideStatus ClearImageHeader(const ImageIdentity& Identity);
+    HideSo::Status RemapImageMappings(const ImageIdentity& Identity, size_t* MappingCount, size_t* RemappedBytes);
+    HideSo::Status ClearImageHeader(const ImageIdentity& Identity);
 }
