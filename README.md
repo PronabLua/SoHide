@@ -90,6 +90,16 @@ The minimum platform is Android 10/API 29. The implementation recognizes the Bio
 
 The process-local hide stages were validated without root on a physical Pixel 8a running Android 17/API 37. The static archive builds cleanly with NDK r24, r27, and r30. Modified or stripped vendor linkers can be unsupported; discovery fails without applying a speculative linker patch.
 
+The process map reader streams `/proc/self/maps`, and target image mappings grow dynamically. This avoids fixed process-wide and per-image mapping ceilings. Unsupported mapping types are rejected before remapping starts.
+
+Run the native regression on an ARM64 device with:
+
+```powershell
+.\tests\Test-MemoryMaps.ps1 -NdkPath C:\Android\Sdk\ndk\27.0.12077973 -Run -Serial <serial>
+```
+
+The regression creates more than 8,000 process mappings and a 96-mapping disposable image. It checks address and protection lookup, image collection, preflight rejection, contents, permissions, and removal of named file mappings.
+
 Anonymous executable mappings remain observable, and memory scanners can still identify code or data. HideSo is a CTF primitive, not a claim of complete process invisibility.
 
 ## License

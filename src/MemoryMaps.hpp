@@ -30,9 +30,21 @@ namespace HideSoPrivate {
         char Path[768];
     };
 
-    HideSo::Status ReadMemoryMaps(MemoryMap* Mappings, size_t Capacity, size_t* Count);
+    struct MemoryMapList
+    {
+        MemoryMap* Mappings = nullptr;
+        size_t Count = 0;
+        size_t Capacity = 0;
+
+        MemoryMapList() = default;
+        MemoryMapList(const MemoryMapList&) = delete;
+        MemoryMapList& operator=(const MemoryMapList&) = delete;
+        ~MemoryMapList();
+        bool Append(const MemoryMap& Mapping);
+    };
+
     HideSo::Status FindImageIdentity(const void* ModuleAddress, ImageIdentity* Identity);
-    HideSo::Status CollectImageMappings(const ImageIdentity& Identity, MemoryMap* Mappings, size_t Capacity, size_t* Count);
+    HideSo::Status CollectImageMappings(const ImageIdentity& Identity, MemoryMapList* Mappings);
     bool IsReadableAddress(uintptr_t Address, size_t Length);
     bool GetAddressProtection(uintptr_t Address, int* Protection);
     bool HasImagePath(const ImageIdentity& Identity);
