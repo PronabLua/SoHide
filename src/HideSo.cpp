@@ -4,6 +4,7 @@
 
 #include "LinkerList.hpp"
 #include "MemoryMaps.hpp"
+#include "HideSo/OllvmProtect.h"
 
 namespace HideSoPrivate {
     static void InitializeResult(HideSo::Result* HideResult, uint32_t Options)
@@ -128,3 +129,5 @@ const char* HideSo::StatusText(Status OperationStatus)
     }
     return "unknown status";
 }
+
+#include "HideSo/OllvmProtectEnd.h"

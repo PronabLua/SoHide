@@ -94,7 +94,7 @@ cmake --preset android-arm64-release -DOG_ENABLE_OLLVM=ON
 cmake --build --preset android-arm64-release
 ```
 
-The exact configured pass block is applied directly to the target. Ninja compilation is serialized to keep the requested BCF function creation and 100-instruction junk-assembly settings within host memory. The function-filter switches act on OLLVM annotations. Sensitive linker and process-map literals also use the pinned `xorstr` header recorded in `THIRD_PARTY_NOTICES.txt`.
+The exact configured pass block is applied directly to the target. Ninja compilation is serialized to keep the requested BCF function creation and 100-instruction junk-assembly settings within host memory. A translation-unit annotation marks every library function for the indirect-branch pass so the function filters do not leave unannotated code untouched. Sensitive linker and process-map literals also use the pinned `xorstr` header recorded in `THIRD_PARTY_NOTICES.txt`.
 
 ## Compatibility
 

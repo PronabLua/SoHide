@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "HideSo/OllvmProtect.h"
 
 namespace HideSoPrivate {
     static bool MatchesHeadSymbol(const char* SymbolName)
@@ -111,3 +112,5 @@ namespace HideSoPrivate {
         return Symbols->ListHeadStorage != 0 && Symbols->ListTailStorage != 0 ? HideSo::Success : HideSo::LinkerSymbolsUnavailable;
     }
 }
+
+#include "HideSo/OllvmProtectEnd.h"

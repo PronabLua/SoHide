@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "ElfFile.hpp"
+#include "HideSo/OllvmProtect.h"
 
 namespace HideSoPrivate {
     static constexpr size_t MaximumObjectBytes = 1024;
@@ -242,3 +243,5 @@ namespace HideSoPrivate {
         return Search.Found;
     }
 }
+
+#include "HideSo/OllvmProtectEnd.h"

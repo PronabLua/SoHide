@@ -9,6 +9,7 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include "HideSo/OllvmProtect.h"
 
 namespace HideSoPrivate {
     MemoryMapList::~MemoryMapList()
@@ -438,3 +439,5 @@ namespace HideSoPrivate {
         return HideSo::Success;
     }
 }
+
+#include "HideSo/OllvmProtectEnd.h"
